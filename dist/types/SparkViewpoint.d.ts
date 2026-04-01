@@ -155,7 +155,7 @@ export declare class SparkViewpoint {
     private driveSort;
     private sortUpdate;
     private updateDisplay;
-    static EMPTY_TEXTURE: THREE.Texture;
+    static EMPTY_TEXTURE: THREE.Texture<unknown>;
     private static dynos;
     private static makeSorter;
 }
