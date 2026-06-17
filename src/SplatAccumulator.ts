@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { FullScreenQuad } from "three/addons/postprocessing/Pass.js";
 import { Readback } from "./Readback";
-import { SplatEdit } from "./SplatEdit";
+import type { SplatEdit } from "./SplatEdit";
 import {
   type CovSplatGenerator,
   type GsplatGenerator,
@@ -41,7 +41,7 @@ import {
   unindentLines,
 } from "./dyno";
 import { getShaders } from "./shaders";
-import { getTextureSize, threeMrtArray } from "./utils";
+import { getTextureSize, isObjectVisible, threeMrtArray } from "./utils";
 
 // A GeneratorMapping describes a Gsplat range that was generated, including
 // which generator and its version number.
@@ -440,21 +440,23 @@ export class SplatAccumulator {
 
   prepareGenerate({
     renderer,
-    scene,
     time,
     camera,
     sortRadial,
     renderSize,
     previous,
+    generators,
+    globalEdits,
     lodInstances,
   }: {
     renderer: THREE.WebGLRenderer;
-    scene: THREE.Scene;
     time: number;
     camera: THREE.Camera;
     sortRadial: boolean;
     renderSize: THREE.Vector2;
     previous: SplatAccumulator;
+    generators: Iterable<SplatGenerator>;
+    globalEdits: Iterable<SplatEdit>;
     lodInstances?: Map<
       SplatMesh,
       { numSplats: number; texture: THREE.DataTexture }
@@ -470,31 +472,13 @@ export class SplatAccumulator {
     this.time = time;
     this.deltaTime = time - previous.time;
 
-    const allGenerators: SplatGenerator[] = [];
-    scene.traverse((node) => {
-      if (node instanceof SplatGenerator) {
-        if (!camera.layers || camera.layers.test(node.layers)) {
-          allGenerators.push(node);
-        }
-      }
-    });
+    const globalEditList = Array.from(globalEdits);
+    const visibleGenerators: SplatGenerator[] = [];
 
-    const globalEditsSet = new Set<SplatEdit>();
-    scene.traverseVisible((node) => {
-      if (node instanceof SplatEdit) {
-        let ancestor = node.parent;
-        while (ancestor != null && !(ancestor instanceof SplatMesh)) {
-          ancestor = ancestor.parent;
-        }
-        if (ancestor == null) {
-          // Not part of a SplatMesh so it's a global edit
-          globalEditsSet.add(node);
-        }
+    for (const object of generators) {
+      if (camera.layers && !camera.layers.test(object.layers)) {
+        continue;
       }
-    });
-    const globalEdits = Array.from(globalEditsSet);
-
-    for (const object of allGenerators) {
       try {
         object.frameUpdate?.({
           renderer,
@@ -504,7 +488,7 @@ export class SplatAccumulator {
           viewToWorld: this.viewToWorld,
           camera,
           renderSize,
-          globalEdits,
+          globalEdits: globalEditList,
           lodIndices:
             lodInstances && object instanceof SplatMesh
               ? lodInstances.get(object)
@@ -516,16 +500,11 @@ export class SplatAccumulator {
         object.covGenerator = undefined;
         object.generatorError = error;
       }
-    }
 
-    const visibleGenerators: SplatGenerator[] = [];
-    scene.traverseVisible((node) => {
-      if (node instanceof SplatGenerator) {
-        if (!camera.layers || camera.layers.test(node.layers)) {
-          visibleGenerators.push(node);
-        }
+      if (isObjectVisible(object)) {
+        visibleGenerators.push(object);
       }
-    });
+    }
 
     const splatCounts = visibleGenerators.map(
       (generator) => generator.numSplats,

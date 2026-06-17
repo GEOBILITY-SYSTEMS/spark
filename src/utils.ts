@@ -16,6 +16,17 @@ import { unindent } from "./dyno/base.js";
 export const threeRevision = Number.parseInt(THREE.REVISION);
 export const threeMrtArray = threeRevision >= 179;
 
+export function isObjectVisible(object: THREE.Object3D) {
+  let current: THREE.Object3D | null = object;
+  while (current) {
+    if (!current.visible) {
+      return false;
+    }
+    current = current.parent;
+  }
+  return true;
+}
+
 const f32buffer = new Float32Array(1);
 const u32buffer = new Uint32Array(f32buffer.buffer);
 const supportsFloat16Array = "Float16Array" in globalThis;

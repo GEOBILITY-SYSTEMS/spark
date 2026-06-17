@@ -4,12 +4,13 @@ import {
   PackedSplats,
   PagedSplats,
   Readback,
-  type SplatGenerator,
   SplatMesh,
   SplatPager,
 } from ".";
 import { SplatAccumulator } from "./SplatAccumulator";
+import { SplatEdit } from "./SplatEdit";
 import { SplatGeometry } from "./SplatGeometry";
+import { SplatGenerator } from "./SplatGenerator";
 import { SplatWorker } from "./SplatWorker";
 import { SPLAT_TEX_HEIGHT, SPLAT_TEX_WIDTH } from "./defines";
 import { getShaders } from "./shaders";
@@ -20,6 +21,7 @@ import {
   isMobile,
   isOculus,
   isVisionPro,
+  isObjectVisible,
   uploadU32DataTextureRows,
 } from "./utils";
 
@@ -367,6 +369,8 @@ export class SparkRenderer extends THREE.Mesh {
   display: SplatAccumulator;
   current: SplatAccumulator;
   accumulators: SplatAccumulator[] = [];
+  registeredSplatGenerators = new Set<SplatGenerator>();
+  registeredGlobalEdits = new Set<SplatEdit>();
 
   sorting = false;
   sortDirty = false;
@@ -716,6 +720,67 @@ export class SparkRenderer extends THREE.Mesh {
     }
   }
 
+  register(object: SplatGenerator | SplatEdit) {
+    if (object instanceof SplatGenerator) {
+      return this.registerSplatGenerator(object);
+    }
+    return this.registerGlobalSplatEdit(object);
+  }
+
+  unregister(object: SplatGenerator | SplatEdit) {
+    if (object instanceof SplatGenerator) {
+      return this.unregisterSplatGenerator(object);
+    }
+    return this.unregisterGlobalSplatEdit(object);
+  }
+
+  registerSplatGenerator(generator: SplatGenerator) {
+    this.registeredSplatGenerators.add(generator);
+    this.setDirty();
+    return this;
+  }
+
+  unregisterSplatGenerator(generator: SplatGenerator) {
+    if (this.registeredSplatGenerators.delete(generator)) {
+      if (generator instanceof SplatMesh) {
+        this.lodInstances.get(generator)?.texture.dispose();
+        this.lodInstances.delete(generator);
+        this.lodDirty = true;
+      }
+      this.setDirty();
+    }
+    return this;
+  }
+
+  registerGlobalSplatEdit(edit: SplatEdit) {
+    this.registeredGlobalEdits.add(edit);
+    this.setDirty();
+    return this;
+  }
+
+  unregisterGlobalSplatEdit(edit: SplatEdit) {
+    if (this.registeredGlobalEdits.delete(edit)) {
+      this.setDirty();
+    }
+    return this;
+  }
+
+  private *getRegisteredSplatGenerators(scene: THREE.Scene) {
+    for (const generator of this.registeredSplatGenerators) {
+      if (isObjectInScene(generator, scene)) {
+        yield generator;
+      }
+    }
+  }
+
+  private *getRegisteredGlobalEdits(scene: THREE.Scene) {
+    for (const edit of this.registeredGlobalEdits) {
+      if (isObjectInScene(edit, scene) && isObjectVisible(edit)) {
+        yield edit;
+      }
+    }
+  }
+
   setDirty() {
     if (!this.dirty) {
       this.dirty = true;
@@ -927,15 +992,18 @@ export class SparkRenderer extends THREE.Mesh {
         "Next accumulator is the same as the current accumulator",
       );
     }
+    const generators = this.getRegisteredSplatGenerators(scene);
+    const globalEdits = this.getRegisteredGlobalEdits(scene);
     const { version, mappingVersion, visibleGenerators, generate } =
       next.prepareGenerate({
         renderer,
-        scene,
         time,
         camera,
         sortRadial: this.sortRadial ?? true,
         renderSize: this.renderSize,
         previous: this.current,
+        generators,
+        globalEdits,
         lodInstances: this.enableLod ? this.lodInstances : undefined,
       });
 
@@ -2102,4 +2170,15 @@ export class SparkRenderer extends THREE.Mesh {
 
 function checkIsXRRenderTarget(renderTarget: THREE.RenderTarget | null) {
   return (renderTarget as unknown as Record<string, boolean>)?.isXRRenderTarget;
+}
+
+function isObjectInScene(object: THREE.Object3D, scene: THREE.Scene) {
+  let current: THREE.Object3D | null = object;
+  while (current) {
+    if (current === scene) {
+      return true;
+    }
+    current = current.parent;
+  }
+  return false;
 }
