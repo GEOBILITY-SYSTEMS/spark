@@ -16,9 +16,9 @@ import {
   isAndroid,
   isIos,
   isMobile,
+  isObjectVisible,
   isOculus,
   isVisionPro,
-  isObjectVisible,
   uploadU32DataTextureRows,
 } from "./utils";
 

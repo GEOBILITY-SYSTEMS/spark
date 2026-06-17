@@ -1,6 +1,7 @@
 import * as THREE from "three";
 export declare const threeRevision: number;
 export declare const threeMrtArray: boolean;
+export declare function isObjectVisible(object: THREE.Object3D): boolean;
 export declare function normalize(vec: number[]): number[];
 export declare function floatBitsToUint(f: number): number;
 export declare function uintBitsToFloat(u: number): number;

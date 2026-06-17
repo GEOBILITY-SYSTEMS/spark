@@ -2,9 +2,9 @@ import * as THREE from "three";
 import { FullScreenQuad } from "three/addons/postprocessing/Pass.js";
 import { Readback } from "./Readback";
 import type { SplatEdit } from "./SplatEdit";
-import {
-  type CovSplatGenerator,
-  type GsplatGenerator,
+import type {
+  CovSplatGenerator,
+  GsplatGenerator,
   SplatGenerator,
 } from "./SplatGenerator";
 import { SplatMesh } from "./SplatMesh";

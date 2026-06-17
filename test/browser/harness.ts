@@ -93,6 +93,9 @@ export class Harness {
       ...options,
     });
     this.scene.add(this.spark);
+    for (const mesh of this.meshes) {
+      this.spark.register(mesh);
+    }
     return this.spark;
   }
 
@@ -145,6 +148,7 @@ export class Harness {
       visible,
     });
     this.scene.add(mesh);
+    this.spark?.register(mesh);
     this.meshes.push(mesh);
     return mesh;
   }
