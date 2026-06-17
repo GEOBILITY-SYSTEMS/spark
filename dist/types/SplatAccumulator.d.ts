@@ -1,5 +1,6 @@
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { Readback } from './Readback';
+import { SplatEdit } from './SplatEdit';
 import { CovSplatGenerator, GsplatGenerator, SplatGenerator } from './SplatGenerator';
 import { SplatMesh } from './SplatMesh';
 import { DynoBool, DynoProgram, DynoProgramTemplate, DynoUsampler2DArray, DynoVec3 } from './dyno';
@@ -69,14 +70,15 @@ export declare class SplatAccumulator {
     }): {
         nextBase: number;
     };
-    prepareGenerate({ renderer, scene, time, camera, sortRadial, renderSize, previous, lodInstances, }: {
+    prepareGenerate({ renderer, time, camera, sortRadial, renderSize, previous, generators, globalEdits, lodInstances, }: {
         renderer: THREE.WebGLRenderer;
-        scene: THREE.Scene;
         time: number;
         camera: THREE.Camera;
         sortRadial: boolean;
         renderSize: THREE.Vector2;
         previous: SplatAccumulator;
+        generators: Iterable<SplatGenerator>;
+        globalEdits: Iterable<SplatEdit>;
         lodInstances?: Map<SplatMesh, {
             numSplats: number;
             texture: THREE.DataTexture;

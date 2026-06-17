@@ -1,5 +1,7 @@
 import { ExtSplats, PackedSplats, PagedSplats, SplatMesh, SplatPager } from '.';
 import { SplatAccumulator } from './SplatAccumulator';
+import { SplatEdit } from './SplatEdit';
+import { SplatGenerator } from './SplatGenerator';
 import { SplatWorker } from './SplatWorker';
 import * as THREE from "three";
 export interface SparkRendererOptions {
@@ -20,11 +22,6 @@ export interface SparkRendererOptions {
      * @default true
      */
     premultipliedAlpha?: boolean;
-    /**
-     * Whether to encode Gsplat with linear RGB (for environment mapping)
-     * @default false
-     */
-    encodeLinear?: boolean;
     /**
      * Pass in a THREE.Clock to synchronize time-based effects across different
      * systems. Alternatively, you can set the property time directly.
@@ -180,6 +177,7 @@ export interface SparkRendererOptions {
      * @default false
      */
     lodInflate?: boolean;
+    lodTraverseMode?: "dynamic" | "standard";
     /**
      * Whether to use extended Gsplat encoding for paged splats, useful for eliminating
      * quantization artifacts from splat scenes with large internal position coordinates.
@@ -319,7 +317,6 @@ export declare class SparkRenderer extends THREE.Mesh {
     falloff: number;
     clipXY: number;
     focalAdjustment: number;
-    encodeLinear: boolean;
     sortRadial: boolean;
     minSortIntervalMs: number;
     clock: THREE.Clock;
@@ -334,6 +331,8 @@ export declare class SparkRenderer extends THREE.Mesh {
     display: SplatAccumulator;
     current: SplatAccumulator;
     accumulators: SplatAccumulator[];
+    registeredSplatGenerators: Set<SplatGenerator>;
+    registeredGlobalEdits: Set<SplatEdit>;
     sorting: boolean;
     sortDirty: boolean;
     lastSortTime: number;
@@ -349,6 +348,7 @@ export declare class SparkRenderer extends THREE.Mesh {
     lodSplatScale: number;
     lodRenderScale: number;
     lodInflate: boolean;
+    lodTraverseMode: "dynamic" | "standard";
     pagedExtSplats: boolean;
     maxPagedSplats: number;
     numLodFetchers: number;
@@ -509,6 +509,14 @@ export declare class SparkRenderer extends THREE.Mesh {
         };
     };
     dispose(): void;
+    register(object: SplatGenerator | SplatEdit): this;
+    unregister(object: SplatGenerator | SplatEdit): this;
+    registerSplatGenerator(generator: SplatGenerator): this;
+    unregisterSplatGenerator(generator: SplatGenerator): this;
+    registerGlobalSplatEdit(edit: SplatEdit): this;
+    unregisterGlobalSplatEdit(edit: SplatEdit): this;
+    private getRegisteredSplatGenerators;
+    private getRegisteredGlobalEdits;
     setDirty(): void;
     onBeforeRender(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera): void;
     clearSplats(): void;
